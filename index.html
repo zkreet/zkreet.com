@@ -7,54 +7,70 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <nav>
-      <span class="logo">Zkreet</span>
-      <a href="#contact" class="nav-btn">Get in Touch</a>
-    </nav>
-  </header>
 
-  <section class="hero">
-    <div class="hero-content">
-      <h1>Welcome to Zkreet</h1>
-      <p>We're building something great. Stay tuned.</p>
-      <a href="#contact" class="cta-btn">Learn More</a>
+  <!-- GLOBE INTRO -->
+  <div id="globe-section">
+    <canvas id="globe"></canvas>
+    <div id="click-hint">
+      <span>Click to explore</span>
+      <div class="pulse-dot"></div>
     </div>
-  </section>
+  </div>
 
-  <section class="features" id="features">
-    <div class="container">
-      <h2>Why Zkreet?</h2>
-      <div class="cards">
-        <div class="card">
-          <div class="icon">⚡</div>
-          <h3>Fast</h3>
-          <p>Built for speed from the ground up, so you never have to wait.</p>
-        </div>
-        <div class="card">
-          <div class="icon">🔒</div>
-          <h3>Secure</h3>
-          <p>Your data stays yours. Privacy and security are baked in.</p>
-        </div>
-        <div class="card">
-          <div class="icon">🚀</div>
-          <h3>Powerful</h3>
-          <p>Everything you need, nothing you don't. Simple, effective, reliable.</p>
+  <!-- MAIN SITE (hidden until zoom completes) -->
+  <div id="main-site" class="hidden">
+    <header>
+      <nav>
+        <span class="logo">Zkreet</span>
+        <a href="#contact" class="nav-btn">Get in Touch</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div class="hero-content">
+        <h1>Welcome to Zkreet</h1>
+        <p>Built in Qatar. Built for the world.</p>
+        <a href="#features" class="cta-btn">Discover More</a>
+      </div>
+    </section>
+
+    <section class="features" id="features">
+      <div class="container">
+        <h2>Why Zkreet?</h2>
+        <div class="cards">
+          <div class="card">
+            <div class="icon">⚡</div>
+            <h3>Fast</h3>
+            <p>Built for speed from the ground up, so you never have to wait.</p>
+          </div>
+          <div class="card">
+            <div class="icon">🔒</div>
+            <h3>Secure</h3>
+            <p>Your data stays yours. Privacy and security are baked in.</p>
+          </div>
+          <div class="card">
+            <div class="icon">🚀</div>
+            <h3>Powerful</h3>
+            <p>Everything you need, nothing you don't. Simple, effective, reliable.</p>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="contact" id="contact">
-    <div class="container">
-      <h2>Get in Touch</h2>
-      <p>Interested in working with us? We'd love to hear from you.</p>
-      <a href="mailto:hello@zkreet.com" class="cta-btn">hello@zkreet.com</a>
-    </div>
-  </section>
+    <section class="contact" id="contact">
+      <div class="container">
+        <h2>Get in Touch</h2>
+        <p>Interested in working with us? We'd love to hear from you.</p>
+        <a href="mailto:admin@zkreet.com" class="cta-btn">admin@zkreet.com</a>
+      </div>
+    </section>
 
-  <footer>
-    <p>&copy; 2026 Zkreet. All rights reserved.</p>
-  </footer>
+    <footer>
+      <p>&copy; 2026 Zkreet. All rights reserved.</p>
+    </footer>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="globe.js"></script>
 </body>
 </html>

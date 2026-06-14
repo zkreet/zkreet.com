@@ -6,8 +6,85 @@
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #000;
   color: #1a1a1a;
-  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ── GLOBE SECTION ── */
+#globe-section {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, #0a0a2e 0%, #000005 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: opacity 0.8s ease;
+}
+
+#globe-section.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#globe {
+  display: block;
+  cursor: pointer;
+}
+
+#click-hint {
+  position: absolute;
+  bottom: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255,255,255,0.7);
+  font-size: 1rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  animation: fadeInUp 2s ease forwards;
+  opacity: 0;
+}
+
+@keyframes fadeInUp {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.pulse-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #00c4b4;
+  box-shadow: 0 0 0 0 rgba(0, 196, 180, 0.6);
+  animation: pulse 1.8s infinite;
+}
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(0,196,180,0.6); }
+  70%  { box-shadow: 0 0 0 14px rgba(0,196,180,0); }
+  100% { box-shadow: 0 0 0 0 rgba(0,196,180,0); }
+}
+
+/* ── MAIN SITE ── */
+#main-site {
+  position: relative;
+  z-index: 1;
+  transition: opacity 0.8s ease 0.2s;
+}
+
+#main-site.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#main-site.visible {
+  opacity: 1;
+  pointer-events: all;
 }
 
 /* NAV */
@@ -15,10 +92,10 @@ header {
   position: fixed;
   top: 0;
   width: 100%;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255,255,255,0.95);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid #eee;
-  z-index: 100;
+  z-index: 200;
 }
 
 nav {
@@ -115,7 +192,6 @@ nav {
   font-size: 2.2rem;
   font-weight: 800;
   margin-bottom: 3rem;
-  color: #1a1a1a;
 }
 
 .cards {
