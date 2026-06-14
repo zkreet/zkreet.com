@@ -111,10 +111,12 @@ function latLonToVec3(lat, lon, r = 1) {
 const TARGET_LAT =  25.485140;
 const TARGET_LON =  50.839598;
 
-// We need this lon to face +Z (camera direction)
-// When rotY = 0, lon=0 faces camera. To bring lon=50.84 to front:
-const TARGET_ROT_Y = -(TARGET_LON) * (Math.PI / 180);
-const TARGET_ROT_X =  TARGET_LAT  * (Math.PI / 180) * 0.28;
+// Correct formula: in Three.js SphereGeometry the texture places
+// lon=0 at +X. Camera is at +Z. To bring +X to +Z we rotate Y by -PI/2.
+// General: TARGET_ROT_Y = -(lon + 90) * PI/180
+const TARGET_ROT_Y = -(TARGET_LON + 90) * (Math.PI / 180);
+// Tilt globe so latitude is vertically centred on screen
+const TARGET_ROT_X = -TARGET_LAT * (Math.PI / 180);
 
 // ── PIN AT TARGET ─────────────────────────────────────────────
 const pinPos = latLonToVec3(TARGET_LAT, TARGET_LON, 1.015);
@@ -157,12 +159,25 @@ let zoomT       = 0;
 let startRotY = 0;
 let startRotX = 0;
 
+let absoluteTargetRotY = 0;
+let absoluteTargetRotX = 0;
+
 canvas.addEventListener('click', () => {
   if (phase !== 0) return;
   phase = 1;
   autoRotate = false;
   startRotY = earth.rotation.y;
   startRotX = earth.rotation.x;
+
+  // Normalize startRotY into [-PI, PI] then find shortest delta to target
+  let norm = ((startRotY % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  if (norm > Math.PI) norm -= Math.PI * 2;
+  let dy = TARGET_ROT_Y - norm;
+  if (dy >  Math.PI) dy -= Math.PI * 2;
+  if (dy < -Math.PI) dy += Math.PI * 2;
+  absoluteTargetRotY = startRotY + dy;
+  absoluteTargetRotX = TARGET_ROT_X;
+
   document.getElementById('click-hint').style.transition = 'opacity 0.5s';
   document.getElementById('click-hint').style.opacity = '0';
 });
@@ -190,16 +205,9 @@ function animate() {
   if (phase === 1) {
     rotT = Math.min(1, rotT + dt * 0.55);
     const e = easeInOut(rotT);
-
-    // Interpolate to target rotation (normalize to avoid spinning the wrong way)
-    let dy = TARGET_ROT_Y - startRotY;
-    // clamp to shortest path
-    while (dy >  Math.PI) dy -= Math.PI * 2;
-    while (dy < -Math.PI) dy += Math.PI * 2;
-    earth.rotation.y = startRotY + dy * e;
-    earth.rotation.x = lerp(startRotX, TARGET_ROT_X, e);
+    earth.rotation.y = lerp(startRotY, absoluteTargetRotY, e);
+    earth.rotation.x = lerp(startRotX, absoluteTargetRotX, e);
     clouds.rotation.y = earth.rotation.y + 0.01;
-
     if (rotT >= 1) phase = 2;
   }
 
