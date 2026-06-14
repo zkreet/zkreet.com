@@ -111,12 +111,16 @@ function latLonToVec3(lat, lon, r = 1) {
 const TARGET_LAT =  25.485140;
 const TARGET_LON =  50.839598;
 
-// Correct formula: in Three.js SphereGeometry the texture places
-// lon=0 at +X. Camera is at +Z. To bring +X to +Z we rotate Y by -PI/2.
-// General: TARGET_ROT_Y = -(lon + 90) * PI/180
-const TARGET_ROT_Y = -(TARGET_LON + 90) * (Math.PI / 180);
-// Tilt globe so latitude is vertically centred on screen
-const TARGET_ROT_X = -TARGET_LAT * (Math.PI / 180);
+// Three.js SphereGeometry places lon=0° at +X axis.
+// Camera is at +Z. To bring +X to face +Z, rotation.y = -PI/2.
+// So to bring any longitude to face camera:
+//   rotation.y = -(lon + 90) * PI/180
+const TARGET_ROT_Y = -(TARGET_LON + 90) * (Math.PI / 180);  // ≈ -2.458 rad
+
+// Positive rotation.x tilts north pole TOWARD camera.
+// For lat=25.485°N we tilt +lat to center it on screen:
+//   rotation.x = +lat * PI/180
+const TARGET_ROT_X = +(TARGET_LAT) * (Math.PI / 180);  // ≈ +0.445 rad
 
 // ── PIN AT TARGET ─────────────────────────────────────────────
 const pinPos = latLonToVec3(TARGET_LAT, TARGET_LON, 1.015);
