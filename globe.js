@@ -122,34 +122,6 @@ const TARGET_ROT_Y = -(TARGET_LON + 90) * (Math.PI / 180);  // ≈ -2.458 rad
 //   rotation.x = +lat * PI/180
 const TARGET_ROT_X = +(TARGET_LAT) * (Math.PI / 180);  // ≈ +0.445 rad
 
-// ── PIN AT TARGET ─────────────────────────────────────────────
-const pinPos = latLonToVec3(TARGET_LAT, TARGET_LON, 1.015);
-
-// Core dot
-const pinCore = new THREE.Mesh(
-  new THREE.SphereGeometry(0.018, 16, 16),
-  new THREE.MeshBasicMaterial({ color: 0x00ffcc })
-);
-pinCore.position.copy(pinPos);
-earth.add(pinCore);
-
-// Halo ring 1
-const ring1 = new THREE.Mesh(
-  new THREE.RingGeometry(0.025, 0.038, 32),
-  new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
-);
-ring1.position.copy(pinPos);
-ring1.lookAt(new THREE.Vector3(0, 0, 0));
-earth.add(ring1);
-
-// Halo ring 2 (outer pulse)
-const ring2 = new THREE.Mesh(
-  new THREE.RingGeometry(0.04, 0.055, 32),
-  new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.3, side: THREE.DoubleSide })
-);
-ring2.position.copy(pinPos);
-ring2.lookAt(new THREE.Vector3(0, 0, 0));
-earth.add(ring2);
 
 // ── STATE ────────────────────────────────────────────────────
 let autoRotate  = true;
@@ -238,14 +210,6 @@ function animate() {
       }, 900);
     }
   }
-
-  // Pulse pin rings
-  const p1 = 0.5 + 0.5 * Math.sin(t * 2.5);
-  const p2 = 0.5 + 0.5 * Math.sin(t * 2.5 + Math.PI);
-  ring1.scale.setScalar(1 + 0.35 * p1);
-  ring1.material.opacity = 0.7 - 0.5 * p1;
-  ring2.scale.setScalar(1 + 0.5 * p2);
-  ring2.material.opacity = 0.3 - 0.25 * p2;
 
   // Clouds slow drift
   if (phase === 0) clouds.rotation.y += 0.0002;
