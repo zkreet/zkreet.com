@@ -1,63 +1,103 @@
-// ── GLOBE SETUP ──────────────────────────────────────────────
+// ── RENDERER ─────────────────────────────────────────────────
 const canvas   = document.getElementById('globe');
 const section  = document.getElementById('globe-section');
 const mainSite = document.getElementById('main-site');
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
 
 const scene  = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 2.8;
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 3.2;
 
 // ── LIGHTS ───────────────────────────────────────────────────
-const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-scene.add(ambient);
+// Ambient — deep blue space fill
+scene.add(new THREE.AmbientLight(0x112244, 0.6));
 
-const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-sun.position.set(5, 3, 5);
+// Sun — warm directional
+const sun = new THREE.DirectionalLight(0xfff5e0, 2.2);
+sun.position.set(6, 3, 4);
 scene.add(sun);
 
+// Rim light from the dark side
+const rim = new THREE.DirectionalLight(0x2244aa, 0.4);
+rim.position.set(-6, -2, -4);
+scene.add(rim);
+
+// ── TEXTURES ─────────────────────────────────────────────────
+const loader = new THREE.TextureLoader();
+
+// High-res NASA Blue Marble + night lights + normal map
+const earthDay    = loader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
+const earthSpec   = loader.load('https://unpkg.com/three-globe/example/img/earth-water.png');
+const earthNight  = loader.load('https://unpkg.com/three-globe/example/img/earth-night.jpg');
+const earthClouds = loader.load('https://unpkg.com/three-globe/example/img/earth-topology.png');
+
 // ── EARTH ────────────────────────────────────────────────────
-const geo     = new THREE.SphereGeometry(1, 64, 64);
-const loader  = new THREE.TextureLoader();
-
-// Use a reliable earth texture
+const earthGeo = new THREE.SphereGeometry(1, 128, 128);
 const earthMat = new THREE.MeshPhongMaterial({
-  map:          loader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg'),
-  specularMap:  loader.load('https://unpkg.com/three-globe/example/img/earth-water.png'),
-  specular:     new THREE.Color(0x333333),
-  shininess:    20,
+  map:          earthDay,
+  specularMap:  earthSpec,
+  specular:     new THREE.Color(0x4488bb),
+  shininess:    35,
+  bumpMap:      earthClouds,
+  bumpScale:    0.012,
 });
-
-const earth = new THREE.Mesh(geo, earthMat);
+const earth = new THREE.Mesh(earthGeo, earthMat);
 scene.add(earth);
 
-// ── ATMOSPHERE GLOW ──────────────────────────────────────────
-const atmGeo = new THREE.SphereGeometry(1.02, 64, 64);
-const atmMat = new THREE.MeshPhongMaterial({
-  color:       0x0099ff,
+// ── CLOUD LAYER ──────────────────────────────────────────────
+const cloudGeo = new THREE.SphereGeometry(1.005, 64, 64);
+const cloudMat = new THREE.MeshPhongMaterial({
+  map:         loader.load('https://unpkg.com/three-globe/example/img/earth-clouds.png'),
   transparent: true,
-  opacity:     0.08,
-  side:        THREE.FrontSide,
+  opacity:     0.35,
+  depthWrite:  false,
+});
+const clouds = new THREE.Mesh(cloudGeo, cloudMat);
+scene.add(clouds);
+
+// ── ATMOSPHERE ───────────────────────────────────────────────
+const atmGeo = new THREE.SphereGeometry(1.06, 64, 64);
+const atmMat = new THREE.ShaderMaterial({
+  vertexShader: `
+    varying vec3 vNormal;
+    void main() {
+      vNormal = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vNormal;
+    void main() {
+      float intensity = pow(0.65 - dot(vNormal, vec3(0,0,1.0)), 3.0);
+      gl_FragColor = vec4(0.1, 0.4, 1.0, 1.0) * intensity;
+    }
+  `,
+  blending: THREE.AdditiveBlending,
+  side: THREE.FrontSide,
+  transparent: true,
+  depthWrite: false,
 });
 scene.add(new THREE.Mesh(atmGeo, atmMat));
 
 // ── STARS ────────────────────────────────────────────────────
-const starGeo = new THREE.BufferGeometry();
-const starCount = 3000;
-const starPos = new Float32Array(starCount * 3);
-for (let i = 0; i < starCount * 3; i++) {
-  starPos[i] = (Math.random() - 0.5) * 200;
+function makeStars(count, spread, size) {
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * spread;
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  return new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size, transparent: true, opacity: 0.85 }));
 }
-starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.12 });
-scene.add(new THREE.Points(starGeo, starMat));
+scene.add(makeStars(4000, 300, 0.18));
+scene.add(makeStars(800,  300, 0.35));  // brighter sparse stars
 
-// ── QATAR PIN ─────────────────────────────────────────────────
-// Qatar lat: 25.3°N, lon: 51.2°E
-function latLonToVec3(lat, lon, r) {
+// ── LAT/LON → Vec3 ───────────────────────────────────────────
+function latLonToVec3(lat, lon, r = 1) {
   const phi   = (90 - lat)  * (Math.PI / 180);
   const theta = (lon + 180) * (Math.PI / 180);
   return new THREE.Vector3(
@@ -67,96 +107,136 @@ function latLonToVec3(lat, lon, r) {
   );
 }
 
-const qatarPos = latLonToVec3(25.3, 51.2, 1.02);
+// ── TARGET: 25.485140, 50.839598 (Qatar) ─────────────────────
+const TARGET_LAT =  25.485140;
+const TARGET_LON =  50.839598;
 
-// Glowing dot on Qatar
-const pinGeo = new THREE.SphereGeometry(0.025, 16, 16);
-const pinMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
-const pin    = new THREE.Mesh(pinGeo, pinMat);
-pin.position.copy(qatarPos);
-earth.add(pin);
+// We need this lon to face +Z (camera direction)
+// When rotY = 0, lon=0 faces camera. To bring lon=50.84 to front:
+const TARGET_ROT_Y = -(TARGET_LON) * (Math.PI / 180);
+const TARGET_ROT_X =  TARGET_LAT  * (Math.PI / 180) * 0.28;
 
-// Outer pulse ring
-const ringGeo = new THREE.RingGeometry(0.03, 0.05, 32);
-const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
-const ring    = new THREE.Mesh(ringGeo, ringMat);
-ring.position.copy(qatarPos);
-ring.lookAt(new THREE.Vector3(0, 0, 0));
-earth.add(ring);
+// ── PIN AT TARGET ─────────────────────────────────────────────
+const pinPos = latLonToVec3(TARGET_LAT, TARGET_LON, 1.015);
 
-// ── TARGET ROTATION (Qatar facing camera) ────────────────────
-// Qatar lon 51.2°E → we want that side facing us
-// Earth rotates around Y. When rotationY=0, lon=0 (Greenwich) faces +Z (camera).
-// To bring lon=51.2 to front: rotationY = -51.2 * PI/180
-const targetRotY = -51.2 * (Math.PI / 180);
-const targetRotX =  25.3 * (Math.PI / 180) * 0.3; // slight tilt
+// Core dot
+const pinCore = new THREE.Mesh(
+  new THREE.SphereGeometry(0.018, 16, 16),
+  new THREE.MeshBasicMaterial({ color: 0x00ffcc })
+);
+pinCore.position.copy(pinPos);
+earth.add(pinCore);
+
+// Halo ring 1
+const ring1 = new THREE.Mesh(
+  new THREE.RingGeometry(0.025, 0.038, 32),
+  new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
+);
+ring1.position.copy(pinPos);
+ring1.lookAt(new THREE.Vector3(0, 0, 0));
+earth.add(ring1);
+
+// Halo ring 2 (outer pulse)
+const ring2 = new THREE.Mesh(
+  new THREE.RingGeometry(0.04, 0.055, 32),
+  new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.3, side: THREE.DoubleSide })
+);
+ring2.position.copy(pinPos);
+ring2.lookAt(new THREE.Vector3(0, 0, 0));
+earth.add(ring2);
 
 // ── STATE ────────────────────────────────────────────────────
 let autoRotate  = true;
 let zooming     = false;
 let zoomDone    = false;
-let rotProgress = 0;  // 0→1 for rotating to Qatar
-let zoomStep    = 0;  // 0→1 for camera zoom
+let phase       = 0;  // 0=idle, 1=rotating, 2=zooming, 3=done
+let rotT        = 0;
+let zoomT       = 0;
 
-// ── CLICK ────────────────────────────────────────────────────
+// Store starting rotation for interpolation
+let startRotY = 0;
+let startRotX = 0;
+
 canvas.addEventListener('click', () => {
-  if (zoomDone || zooming) return;
-  zooming    = true;
+  if (phase !== 0) return;
+  phase = 1;
   autoRotate = false;
+  startRotY = earth.rotation.y;
+  startRotX = earth.rotation.x;
+  document.getElementById('click-hint').style.transition = 'opacity 0.5s';
   document.getElementById('click-hint').style.opacity = '0';
 });
 
-// ── ANIMATE ──────────────────────────────────────────────────
+// ── EASING ───────────────────────────────────────────────────
+function easeInOut(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// ── CLOCK ────────────────────────────────────────────────────
 const clock = new THREE.Clock();
 
-function lerp(a, b, t) { return a + (b - a) * t; }
-function easeInOut(t)   { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
-
+// ── ANIMATE ──────────────────────────────────────────────────
 function animate() {
   requestAnimationFrame(animate);
-  const delta = clock.getDelta();
+  const dt = clock.getDelta();
+  const t  = clock.getElapsedTime();
 
+  // Idle auto-rotate
   if (autoRotate) {
-    earth.rotation.y += 0.0015;
+    earth.rotation.y += 0.0012;
+    clouds.rotation.y += 0.0014;
   }
 
-  if (zooming && !zoomDone) {
-    // Phase 1: rotate Earth so Qatar faces camera (rotProgress 0→1 over ~1.5s)
-    if (rotProgress < 1) {
-      rotProgress = Math.min(1, rotProgress + delta * 0.7);
-      const e = easeInOut(rotProgress);
-      earth.rotation.y = lerp(earth.rotation.y % (Math.PI * 2), targetRotY, e * 0.06);
-      earth.rotation.x = lerp(earth.rotation.x, targetRotX, e * 0.04);
-    }
+  // Phase 1: Rotate Earth so target faces camera
+  if (phase === 1) {
+    rotT = Math.min(1, rotT + dt * 0.55);
+    const e = easeInOut(rotT);
 
-    // Phase 2: zoom camera in toward Earth (zoomStep 0→1 over ~2s)
-    if (rotProgress > 0.3) {
-      zoomStep = Math.min(1, zoomStep + delta * 0.45);
-      const e  = easeInOut(zoomStep);
-      camera.position.z = lerp(2.8, 0.18, e);
+    // Interpolate to target rotation (normalize to avoid spinning the wrong way)
+    let dy = TARGET_ROT_Y - startRotY;
+    // clamp to shortest path
+    while (dy >  Math.PI) dy -= Math.PI * 2;
+    while (dy < -Math.PI) dy += Math.PI * 2;
+    earth.rotation.y = startRotY + dy * e;
+    earth.rotation.x = lerp(startRotX, TARGET_ROT_X, e);
+    clouds.rotation.y = earth.rotation.y + 0.01;
 
-      // Shift camera slightly toward Qatar's screen position
-      camera.position.x = lerp(0,  0.05, e);
-      camera.position.y = lerp(0,  0.08, e);
-    }
+    if (rotT >= 1) phase = 2;
+  }
 
-    // Phase 3: when fully zoomed, trigger transition
-    if (zoomStep >= 1 && !zoomDone) {
+  // Phase 2: Zoom camera toward Earth
+  if (phase === 2) {
+    zoomT = Math.min(1, zoomT + dt * 0.38);
+    const e = easeInOut(zoomT);
+
+    camera.position.z = lerp(3.2, 0.14, e);
+    // Slight shift to center on Qatar's screen position
+    camera.position.x = lerp(0,  0.04, e);
+    camera.position.y = lerp(0,  0.06, e);
+
+    if (zoomT >= 1 && !zoomDone) {
       zoomDone = true;
+      phase = 3;
       section.classList.add('fade-out');
       mainSite.classList.remove('hidden');
       setTimeout(() => {
         mainSite.classList.add('visible');
         section.style.display = 'none';
+        // Trigger scroll reveals on hero
+        document.querySelectorAll('.hero-content .reveal').forEach(el => el.classList.add('visible'));
       }, 900);
     }
   }
 
-  // Pulse the ring
-  const t = clock.getElapsedTime();
-  const s = 1 + 0.4 * Math.abs(Math.sin(t * 2));
-  ring.scale.set(s, s, s);
-  ringMat.opacity = 0.6 - 0.4 * Math.abs(Math.sin(t * 2));
+  // Pulse pin rings
+  const p1 = 0.5 + 0.5 * Math.sin(t * 2.5);
+  const p2 = 0.5 + 0.5 * Math.sin(t * 2.5 + Math.PI);
+  ring1.scale.setScalar(1 + 0.35 * p1);
+  ring1.material.opacity = 0.7 - 0.5 * p1;
+  ring2.scale.setScalar(1 + 0.5 * p2);
+  ring2.material.opacity = 0.3 - 0.25 * p2;
+
+  // Clouds slow drift
+  if (phase === 0) clouds.rotation.y += 0.0002;
 
   renderer.render(scene, camera);
 }
